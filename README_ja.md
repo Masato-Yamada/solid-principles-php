@@ -9,96 +9,110 @@
 
 機能をカプセル化したモデムの実装クラスを見てみましょう。
 
+SRPに準じていないコード
 ```php
-class Modem
-{
-    public function dial($pno)
+<?
+class SalesReporter {
+    public function getSalesBetween($startDate, $endDate)
     {
-        // Implementing dial($pno) method.
+        $sales = $this->queryDbForSalesBetween($startDate, $endDate);
+        return $this->format($sales);
     }
-
-    public function hangup()
+    protected function queryDbForSalesBetween($startDate, $endDate)
     {
-        //  Implementing hangup() method.
+        return DB::table('sales')->whereBetween('create_at', [$startDate, $endDate])->sum('amount');
     }
-
-    public function send($c)
+    protected function format($sales)
     {
-        // Implementing send($c) method.
-    }
-
-    public function receive()
-    {
-        // Implementing receive() method.
+        echo "<h1>your sales: ".$sales."</h1>" ;
     }
 }
+//usage
+$report = new SalesReporter;
+$begin = Carbon\Carbon::now()->subDays(10);
+$end = Carbon\Carbon::now();
+$report->between($begin, $end);
 ```
 
-このクラスには、2つの変更の理由があります。
-1つはデータチャネルと、もう一つはコネクションです。
+SalesReporterクラスには、3つの「変更の理由」があります。  
+- 永続性のあるシステムからデータを取り出す（技術的関心事）
+- 出力フォーマットの指定（プレゼンテーション）
+- 特定の期間の売り上げ金額を取得（ビジネスロジック）
 
-ビジネスロジックとプレゼンテーションをごっちゃにするのはよくありません。SRP違反となります。次のコードを見てみましょう。
+ビジネスロジックとプレゼンテーションをごっちゃにするのはよくありません。SRP違反となります。
+また、技術的関心事とドメインの関心事が一緒になっているのもよくありません。（技術的関心事とドメインの関心事の分離について詳しく知りたい方はDDDを勉強してください）
 
-※補足：電話をイメージして頂いて、「dial」と「hangup」はユーザーの操作、「send」「receive」は機械側で行なっている実際のデータの動き、と考えてみてください。
-その場合、「dial」と「hangup」はユーザーと直接触れる層になるので、プレゼンテーション層と考える事とします。
+次のコードを見てみましょう。
 
+SRPに準じたコード
 ```php
-interface DataChannel
-{
-
-    public function send($c);
-
-    public function receive();
-
+<?
+interface SalesOutputInterface {
+    public function output();
+}
+class HtmlOutput implements SalesOutputInterface {
+    public function output($sales)
+    {
+        echo "<h1>your sales:¥{$sales}</h1>";
+    }
 }
 
-interface Connection
-{
-
-    public function dial($pno);
-
-    public function hangup();
+interface SalesRepositoryInterface {
+    public function between();
+}
+class SalesDbRepository implements SalesRepositoryInterface{
+    public function between($startDate, $endDate)
+    {
+        return DB::table('sales')->whereBetween('create_at', [$startDate, $endDate])->sum('amount');
+    }
 }
 
-class ModemImplementation implements DataChannel, Connection
-{
-
-    public function send($c)
+class SalesReporter {
+    public $salesRepository;
+    public function __construct(SalesRepositoryInterface $salesRepository)
     {
-        // Implementing send() method.
+        $this->salesRepository = $salesRepository;
     }
-
-    public function receive()
+    public function getSalesBetween($startDate, $endDate, SalesOutputInterface $formatter)
     {
-        // Implementing receive() method.
-    }
-
-    public function dial($pno)
-    {
-        // Implementing dial() method.
-    }
-
-    public function hangup()
-    {
-        // Implementing hangup() method.
+        $sales = $this->report->between($startDate, $endDate);
+        $formatter->output($sales);
     }
 }
+// example usage.
+$report = new SalsReporter(new SalesDbRepository());
+$startDate = Carbon\Carbon::subDays(10);
+$endDate = Carbon\Carbon::now();
+$formatter = new HtmlOutput();
+$report->between($startDate, $endDate, $formatter);
 ```
-これは、ビジネスロジックとプレゼンテーションを分離するとても基本的な例です。
-分離する事で、SRPを守っています。これにより、プレゼンテーションの柔軟性が増しました。
+SalesReporterから3つの役割を分離し、以下のようなクラス分けをしました。
+- 永続性のあるシステムからデータを取り出す（技術的関心事）-> SalesRepositoryInterface, SalesRepository
+- 出力フォーマットの指定（プレゼンテーション）-> SalesOutputInterface, HtmlOutput
+- 特定の期間の売り上げ金額を取得（ビジネスロジック） -> SalesReporter
 
+分離する事で、SRPを守っています。これにより、柔軟性が増しました。
+
+演習問題：以下の変更を、SRPに準じたコード、SRPに準じていないコードの両方に実装してください。
+- 出力フォーマットを「<h3>売り上げ金額：○○円</h3>」としてください。
+- ORマッパーに脆弱性があったため、生のSQLを書いて、データを取得するように変更してください。
+- 期が変わってしまうので、4/1をまたいで売り上げ金額を取得できないようにしてください。  （3/25〜4/15みたいな指定ができないようにする）
 
 #### UML diagram:
-![alt tag](https://github.com/igariok1990/solid-principles-php/blob/master/SingleResponsibility/uml/uml.png)
+![alt tag](https://github.com/Masato-Yamada/solid-principles-php/blob/master/SingleResponsibility/uml/uml.png)
 
-#### **OCP	The Open Closed Principle**
-You should be able to extend a classes behavior, without modifying it.
+#### **オープンクローズドの原則（OCP: The Open Closed Principle）**
 
-At first thought that might sound quite academic and abstract. What it means though is that we should strive to write code that doesn’t have to be changed every time the requirements change.
+拡張に対して開いていて、修正に対して閉じていなければならない
 
-Here is an example of GasStation the modality to put gas in vehicles, the code works but the problem will apear if we would like to put gas for another vehicle, for that we should update "putGasInVehicle()" method, that violate OPC
+抽象的で非常に学術的に聞こえるかもしれないが、要は、仕様変更の度にコードを修正しなくても良いようにコードと格闘しなければいけない、ということです。
 
+ガソリンスタンドで、車にガソリンを入れる手順の例を以下に示します。以下のコードは正常に動作しますが、他の車種にガソリンを入れようとした時に問題が発生します。
+それは、車種が増える度に、いちいち"putGasInVehicle()"メソッドを修正しなければいけません。これは、OCPに反しています。
+
+OCPに準じていないコード
 ```php
+<?
 class GasStation
 {
     public function putGasInVehicle(Vehicle $vehicle)
@@ -140,9 +154,10 @@ class Motorcycle extends Vehicle
 }
 ```
 
-After a little refactoring we got that:
 
+OCPに準じたコード
 ```php
+<?
 class GasStation
 {
     public function putGasInVehicle(Vehicle $vehicle)
@@ -175,11 +190,14 @@ class Motorcycle extends Vehicle
 }
 ```
 
+演習問題：以下の変更を、OCPに準じたコード、OCPに準じていないコードの両方に実装してください。
+- 戦車(Tank)を実装してください。タンク容量は100リットルです。
 
-####UML diagram:
-![alt tag](https://github.com/igariok1990/solid-principles-php/blob/master/OpenClose/uml/uml.png)
 
-####**LSP	The Liskov Substitution Principle**
+#### UML diagram:
+![alt tag](https://github.com/Masato-Yamada/solid-principles-php/blob/master/OpenClose/uml/uml.png)
+
+#### **LSP	The Liskov Substitution Principle**
 Derived classes must be substitutable for their base classes.
 
 Below is the classic example for which the Likov Substitution Principle is violated. Let's assume that the Rectangle object is used somewhere in the application. We extend the application and add the Square class. The square class is returned by a factory pattern, based on some conditions and we don't know the exact what type of object will be returned.
@@ -280,7 +298,7 @@ class Driver
 In conclusion this principle is just an extension of the Open Close Principle and it means that we must make sure that new derived classes are extending the base classes without changing their behavior.
 
 ####UML diagram:
-![alt tag](https://github.com/igariok1990/solid-principles-php/blob/master/LiskovSubstitution/uml/uml.png)
+![alt tag](https://github.com/Masato-Yamada/solid-principles-php/blob/master/LiskovSubstitution/uml/uml.png)
 
 ####**ISP	The Interface Segregation Principle**
 Make fine grained interfaces that are client specific.
@@ -357,7 +375,7 @@ class SuperWorker implements IWorkable, IFeedable
 ```
 
 ####UML diagram:
-![alt tag](https://github.com/igariok1990/solid-principles-php/blob/master/InterfaceSegregation/uml/uml.png)
+![alt tag](https://github.com/Masato-Yamada/solid-principles-php/blob/master/InterfaceSegregation/uml/uml.png)
 
 ####**DIP	The Dependency Inversion Principle**
 Depend on abstractions, not on concretions.
@@ -434,4 +452,4 @@ class Manager
 ```
 
 ####UML diagram:
-![alt tag](https://github.com/igariok1990/solid-principles-php/blob/master/DependencyInversion/uml/uml.png)
+![alt tag](https://github.com/Masato-Yamada/solid-principles-php/blob/master/DependencyInversion/uml/uml.png)
