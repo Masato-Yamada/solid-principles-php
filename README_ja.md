@@ -485,7 +485,7 @@ class Manager
     public function manage()
     {
         $this->worker->work();
-	  }
+    }
 }
 ```
 
