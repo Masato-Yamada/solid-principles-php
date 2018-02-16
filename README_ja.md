@@ -94,9 +94,16 @@ SalesReporterから3つの役割を分離し、以下のようなクラス分け
 分離する事で、SRPを守っています。これにより、柔軟性が増しました。
 
 演習問題：以下の変更を、SRPに準じたコード、SRPに準じていないコードの両方に実装してください。
-- 出力フォーマットを「<h3>売り上げ金額：○○円</h3>」としてください。
-- ORマッパーに脆弱性があったため、生のSQLを書いて、データを取得するように変更してください。
+- 出力フォーマットを「&lt;h3&gt;売り上げ金額：○○円&lt;/h3&gt;」としてください。
+- ORマッパーに脆弱性があったため、生のSQLを書いて、データを取得するように変更してください。  
+生のクエリーは
+```
+DB::query($sql)
+```
+で実行する事ができます。
 - 期が変わってしまうので、4/1をまたいで売り上げ金額を取得できないようにしてください。  （3/25〜4/15みたいな指定ができないようにする）
+
+SRPを理解するための仮想コードなので、細かい部分はあまり気にしないようにお願いします。。。
 
 #### UML diagram:
 ![alt tag](https://github.com/Masato-Yamada/solid-principles-php/blob/master/SingleResponsibility/uml/uml.png)
@@ -197,71 +204,76 @@ class Motorcycle extends Vehicle
 #### UML diagram:
 ![alt tag](https://github.com/Masato-Yamada/solid-principles-php/blob/master/OpenClose/uml/uml.png)
 
-#### **LSP	The Liskov Substitution Principle**
-Derived classes must be substitutable for their base classes.
+#### **リスコフの置換原則（LSP: The Liskov Substitution Principle）**
+派生型はその基本型と置換可能でなければならない
 
-Below is the classic example for which the Likov Substitution Principle is violated. Let's assume that the Rectangle object is used somewhere in the application. We extend the application and add the Square class. The square class is returned by a factory pattern, based on some conditions and we don't know the exact what type of object will be returned.
+以下の例は、典型的なリスコフの置換原則に違反している例です。
+DriverクラスのgoメソッドにVehicle型のクラスを与えていますが、クラスの型によってgoメソッドの挙動が変わってしまっています。これはリスコフの置換原則に違反しています。
 
-```php
-class Rectangle
-{
-    /** @var  integer */
-    protected $width;
-    /** @var  integer */
-    protected $height;
-    /**
-     * @param $width
-     */
-    public function setWidth($width)
-    {
-        $this->width = $width;
-    }
-    /**
-     * @param $height
-     */
-    public function setHeight($height)
-    {
-        $this->height = $height;
-    }
-    /**
-     * @return mixed
-     */
-    public function getArea()
-    {
-        return $this->height * $this->width;
-    }
-}
-class Square extends Rectangle
-{
-    /**
-     * @param $width
-     */
-    public function setWidth($width)
-    {
-        $this->width = $width;
-        $this->height = $width;
-    }
-    /**
-     * @param $height
-     */
-    public function setHeight($height)
-    {
-        $this->height = $height;
-        $this->width = $height;
-    }
-}
-```
-Valid example
+LSPに準じていないコード
 ```php
 class Vehicle
 {
     public function startEngine()
     {
-        // default engine start procedure
+        $this->checkKey();
     }
     public function accelerate()
     {
         //default acceleration procedure
+    }
+    public function checkKey()
+    {
+        // check key
+    }
+}
+class Car extends Vehicle
+{
+    public function checkTank(){
+        //check gas procedure
+    }
+}
+
+class ElectricCar extends Vehicle
+{
+    public function increaseVoltage(){
+        // increase voltage procedure
+    }
+}
+class Driver
+{
+    function go(Vehicle $vehicle) {
+        if( $vehicle instanceof Car ) {
+            $vehicle->checkTank();
+        }
+
+        $vehicle->startEngine();
+
+        if( $vehicle instanceof ElectricCar ) {
+            $this->increaseVoltage();
+        }
+
+        $vehicle->accelerate();
+    }
+}
+```
+
+上記をリファクタリングしたのが、以下の例です。
+LSPに準じたコード
+```php
+class Vehicle
+{
+    public function startEngine()
+    {
+        $this->checkKey();
+    }
+    public function accelerate()
+    {
+        //default acceleration procedure
+    }
+    public function checkKey()
+    {
+        // check key
     }
 }
 class Car extends Vehicle
@@ -295,7 +307,13 @@ class Driver
     }
 }
 ```
-In conclusion this principle is just an extension of the Open Close Principle and it means that we must make sure that new derived classes are extending the base classes without changing their behavior.
+これによって、クラスの型によらず、Driverクラスのgoメソッドの振る舞いは何も変化しなくなりました。
+この原則は、オープンクローズドの原則の拡張と考えられます。In conclusion this principle is just an extension of the Open Close Principle and it means that we must make sure that new derived classes are extending the base classes without changing their behavior.
+
+演習問題：
+LSPに準じたコード、LSPに準じていないコードの両方に、新しい車種、天然ガス車（GasCar）を追加してみましょう。
+天然ガス車は、エンジンをかける前にガス漏れがないか確認する必要があります。（checkLeakGas()）
+また、天然ガス車はスマートキーなので、checkKey()は不要になります。処理をうまく除いてみてください。
 
 ####UML diagram:
 ![alt tag](https://github.com/Masato-Yamada/solid-principles-php/blob/master/LiskovSubstitution/uml/uml.png)
