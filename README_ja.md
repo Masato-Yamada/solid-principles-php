@@ -497,7 +497,7 @@ $manager = new Manager();
 $manager->setWorker(new Worker());
 $manager->manage();
 ```
-上記のコードがあった時に、manageからSuperWorkerのworkが呼ばれるように変更してください。
+上記のコードがあった時に、manageからSuperWorkerクラスのwork()が呼ばれるように変更してください。
 
 #### UML diagram:
 ![alt tag](https://github.com/Masato-Yamada/solid-principles-php/blob/master/DependencyInversion/uml/uml.png)
