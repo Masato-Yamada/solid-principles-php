@@ -93,7 +93,9 @@ SalesReporterから3つの役割を分離し、以下のようなクラス分け
 
 分離する事で、SRPを守っています。これにより、柔軟性が増しました。
 
-演習問題：以下の変更を、SRPに準じたコード、SRPに準じていないコードの両方に実装してください。
+#### 演習問題
+
+以下の変更を、SRPに準じたコード、SRPに準じていないコードの両方に実装してください。
 - 出力フォーマットを「&lt;h3&gt;売り上げ金額：○○円&lt;/h3&gt;」としてください。
 - ORマッパーに脆弱性があったため、生のSQLを書いて、データを取得するように変更してください。  
 生のクエリーは
@@ -197,7 +199,9 @@ class Motorcycle extends Vehicle
 }
 ```
 
-演習問題：以下の変更を、OCPに準じたコード、OCPに準じていないコードの両方に実装してください。
+#### 演習問題
+
+以下の変更を、OCPに準じたコード、OCPに準じていないコードの両方に実装してください。
 - 戦車(Tank)を実装してください。タンク容量は100リットルです。
 
 
@@ -310,18 +314,20 @@ class Driver
 これによって、クラスの型によらず、Driverクラスのgoメソッドの振る舞いは何も変化しなくなりました。
 この原則は、オープンクローズドの原則の拡張と考えられます。In conclusion this principle is just an extension of the Open Close Principle and it means that we must make sure that new derived classes are extending the base classes without changing their behavior.
 
-演習問題：
+#### 演習問題
 LSPに準じたコード、LSPに準じていないコードの両方に、新しい車種、天然ガス車（GasCar）を追加してみましょう。
 天然ガス車は、エンジンをかける前にガス漏れがないか確認する必要があります。（checkLeakGas()）
-また、天然ガス車はスマートキーなので、checkKey()は不要になります。処理をうまく除いてみてください。
+また、天然ガス車はスマートキーなので、checkKey()は不要になります。CarとElectricCarにはcheckKey()は必要です。
+Vehicleクラスから処理をうまく除いてみてください。
 
-####UML diagram:
+#### UML diagram:
 ![alt tag](https://github.com/Masato-Yamada/solid-principles-php/blob/master/LiskovSubstitution/uml/uml.png)
 
-####**ISP	The Interface Segregation Principle**
-Make fine grained interfaces that are client specific.
+#### **インタフェース分離の原則（ISP: The Interface Segregation Principle）**
+上位のモジュールは下位のモジュールに依存してはならない。どちらのモジュールも「抽象」に依存すべきである。
+「抽象」は実装の詳細に依存してはならない。実装の詳細が「抽象」に依存すべきである。
 
-Violated example
+ISPに準じていないコード
 ```php
 interface IWorker
 {
@@ -351,7 +357,9 @@ class Robot implements IWorker
     }
 }
 ```
-Valid example:
+Robotはeatメソッドは必要ないので、空の実装になっています。しかし、このように使用しないメソッドに依存してはいけません。
+
+ISPに準じたコード
 ```php
 interface IWorkable
 {
@@ -391,14 +399,25 @@ class SuperWorker implements IWorkable, IFeedable
     }
 }
 ```
+Robotクラスは必要なインターフェースのみ実装するようになりました。これで、IFeedableに何か変更があっても、Robotクラスは
+何も影響されないようになりました！
 
-####UML diagram:
+#### 演習問題
+ISPに準じたコード、ISPに準じていないコードの両方に、IFeedableのeatメソッドシグネチャを変更してください。
+eatメソッドの引数としてfoodKindが設定できるようにしてください。
+
+#### UML diagram:
 ![alt tag](https://github.com/Masato-Yamada/solid-principles-php/blob/master/InterfaceSegregation/uml/uml.png)
 
-####**DIP	The Dependency Inversion Principle**
-Depend on abstractions, not on concretions.
+#### **依存関係逆転の原則（DIP: The Dependency Inversion Principle）**
+上位のモジュールは下位のモジュールに依存してはならない。どちらのモジュールも「抽象」に依存すべきである。
+「抽象」は実装の詳細に依存してはならない。実装の詳細が「抽象」に依存すべきである。
 
-Violated example
+手続き型のプログラミングでは、上位のモジュールが下位のモジュールに依存したりするが、本来は上位のモジュールが
+下位のモジュールに影響を与えるべきで、下位のモジュールが変更されたからといって、上位のモジュールに影響があってはいけない。
+手続き型のプログラミング時代の依存関係を「逆転させる」のが、この原則です。
+
+DIPに準じていないコード
 ```php
 class Worker
 {
@@ -431,7 +450,8 @@ class Manager
     }
 }
 ```
-Valid example:
+
+DIPに準じたコード
 ```php
 interface IWorker
 {
@@ -465,9 +485,19 @@ class Manager
     public function manage()
     {
         $this->worker->work();
-	}
+	  }
 }
 ```
 
-####UML diagram:
+#### 演習問題
+DIPに準じたコード、DIPに準じていないコードの両方に以下の変更を加えてください。
+```
+//example usage
+$manager = new Manager();
+$manager->setWorker(new Worker());
+$manager->manage();
+```
+上記のコードがあった時に、manageからSuperWorkerのworkが呼ばれるように変更してください。
+
+#### UML diagram:
 ![alt tag](https://github.com/Masato-Yamada/solid-principles-php/blob/master/DependencyInversion/uml/uml.png)
