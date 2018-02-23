@@ -6,7 +6,7 @@ interface SalesOutputInterface {
 class HtmlOutput implements SalesOutputInterface {
     public function output($sales)
     {
-        echo "<h1>your sales:¥{$sales}</h1>";
+        echo "<h3>売り上げ金額：{$sales}円</h3>";
     }
 }
 
@@ -16,7 +16,7 @@ interface SalesRepositoryInterface {
 class SalesDbRepository implements SalesRepositoryInterface{
     public function between($startDate, $endDate)
     {
-        return DB::table('sales')->whereBetween('create_at', [$startDate, $endDate])->sum('amount');
+        return DB::query("select sum(amount) from sales where between create_at ".$startDate ." and ". $endDate);
     }
 }
 
@@ -28,7 +28,12 @@ class SalesReporter {
     }
     public function getSalesBetween($startDate, $endDate, SalesOutputInterface $formatter)
     {
-        $sales = $this->report->between($startDate, $endDate);
+        if( $startDate <= "3/31" and $endDate >= "4/1" ) {
+             $sales = "";
+        }
+        else {
+            $sales = $this->report->between($startDate, $endDate);
+        }
         $formatter->output($sales);
     }
 }
