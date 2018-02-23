@@ -3,16 +3,19 @@
 class SalesReporter {
     public function getSalesBetween($startDate, $endDate)
     {
+        if( $startDate <= "3/31" and $endDate >= "4/1" ) {
+            return false;
+        }
         $sales = $this->queryDbForSalesBetween($startDate, $endDate);
         return $this->format($sales);
     }
     protected function queryDbForSalesBetween($startDate, $endDate)
     {
-        return DB::table('sales')->whereBetween('create_at', [$startDate, $endDate])->sum('amount');
+        return DB::query("select sum(`amount`) from sales where create_at between ".$startDate." and ". $endDate);
     }
     protected function format($sales)
     {
-        echo "<h1>your sales: ".$sales."</h1>" ;
+        echo "<h3>売り上げ金額：".$sales."円</h3>" ;
     }
 }
 
