@@ -1,64 +1,41 @@
 <?php
 
-namespace SRPValid;
-
-interface DataChannel
-{
-    /**
-     * @param $c
-     * @return mixed
-     */
-    public function send($c);
-
-    /**
-     * @return string
-     */
-    public function receive();
-
+interface SalesOutputInterface {
+    public function output();
+}
+class HtmlOutput implements SalesOutputInterface {
+    public function output($sales)
+    {
+        echo "<h1>your sales:¥{$sales}</h1>";
+    }
 }
 
-interface Connection
-{
-    /**
-     * @param $pno
-     * @return mixed
-     */
-    public function dial($pno);
-
-    public function hangup();
+interface SalesRepositoryInterface {
+    public function between();
+}
+class SalesDbRepository implements SalesRepositoryInterface{
+    public function between($startDate, $endDate)
+    {
+        return DB::table('sales')->whereBetween('create_at', [$startDate, $endDate])->sum('amount');
+    }
 }
 
-class ModemImplementation implements DataChannel, Connection
-{
-
-    /**
-     * @param $c
-     * @return mixed
-     */
-    public function send($c)
+class SalesReporter {
+    public $salesRepository;
+    public function __construct(SalesRepositoryInterface $salesRepository)
     {
-        // Implementing send() method.
+        $this->salesRepository = $salesRepository;
     }
-
-    /**
-     * @return string
-     */
-    public function receive()
+    public function getSalesBetween($startDate, $endDate, SalesOutputInterface $formatter)
     {
-        // Implementing receive() method.
-    }
-
-    /**
-     * @param $pno
-     * @return mixed
-     */
-    public function dial($pno)
-    {
-        // Implementing dial() method.
-    }
-
-    public function hangup()
-    {
-        // Implementing hangup() method.
+        $sales = $this->report->between($startDate, $endDate);
+        $formatter->output($sales);
     }
 }
+
+// example usage.
+$report = new SalsReporter(new SalesDbRepository());
+$startDate = Carbon\Carbon::subDays(10);
+$endDate = Carbon\Carbon::now();
+$formatter = new HtmlOutput();
+$report->between($startDate, $endDate, $formatter);

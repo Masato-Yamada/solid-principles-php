@@ -1,26 +1,25 @@
 <?php
 
-namespace SRPViolation;
-
-class Modem
-{
-    public function dial($pno)
+class SalesReporter {
+    public function getSalesBetween($startDate, $endDate)
     {
-        // Implementing dial($pno) method.
+        $sales = $this->queryDbForSalesBetween($startDate, $endDate);
+        return $this->format($sales);
     }
-
-    public function hangup()
+    protected function queryDbForSalesBetween($startDate, $endDate)
     {
-        //  Implementing hangup() method.
+        return DB::table('sales')->whereBetween('create_at', [$startDate, $endDate])->sum('amount');
     }
-
-    public function send($c)
+    protected function format($sales)
     {
-        // Implementing send($c) method.
-    }
-
-    public function receive()
-    {
-        // Implementing receive() method.
+        echo "<h1>your sales: ".$sales."</h1>" ;
     }
 }
+
+//usage
+$report = new SalesReporter;
+$begin = Carbon\Carbon::now()->subDays(10);
+$end = Carbon\Carbon::now();
+$report->between($begin, $end);
+
+?>
